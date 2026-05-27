@@ -57,7 +57,7 @@ ai-building-permit-manager/
 │   ├── architecture/                # 시스템 구조도, ERD, 시퀀스 다이어그램
 │   ├── api/                         # API 명세
 │   ├── data/                        # 데이터/API 조사 문서
-│   └── decisions/                   # 기술 의사결정 기록 ADR
+│   └── history/                     # 작업 기록
 │
 ├── tests/
 │   ├── e2e/                         # 전체 플로우 테스트

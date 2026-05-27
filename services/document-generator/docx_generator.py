@@ -1,0 +1,3 @@
+class DocxGenerator:
+    pass
+

@@ -1,0 +1,3 @@
+class DataFreshnessPolicy:
+    pass
+

@@ -1,0 +1,3 @@
+class DocumentRenderer:
+    pass
+

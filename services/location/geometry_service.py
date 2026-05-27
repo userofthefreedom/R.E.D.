@@ -1,0 +1,3 @@
+class GeometryService:
+    pass
+

@@ -1,0 +1,3 @@
+class LandUseService:
+    pass
+

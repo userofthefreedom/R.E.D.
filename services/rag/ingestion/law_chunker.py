@@ -1,0 +1,3 @@
+class LawChunker:
+    pass
+

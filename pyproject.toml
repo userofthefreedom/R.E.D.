@@ -1,0 +1,11 @@
+[project]
+name = "ai-building-permit-manager"
+version = "0.1.0"
+description = "AI building permit pre-diagnosis platform"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+

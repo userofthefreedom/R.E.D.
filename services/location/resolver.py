@@ -1,0 +1,3 @@
+class LocationResolver:
+    pass
+

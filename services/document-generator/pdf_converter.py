@@ -1,0 +1,3 @@
+class PdfConverter:
+    pass
+

@@ -1,0 +1,3 @@
+class DenseRetriever:
+    pass
+

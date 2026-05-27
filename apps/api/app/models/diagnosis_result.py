@@ -1,0 +1,3 @@
+class DiagnosisResult:
+    pass
+

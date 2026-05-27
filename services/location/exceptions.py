@@ -1,0 +1,3 @@
+class LocationServiceError(Exception):
+    pass
+

@@ -97,15 +97,18 @@ ai-building-permit-manager/
 2. 프론트엔드 구조: apps/web
 ---------------------------
 
-문서의 대표 화면은 5단계로 구성된다.
+기획서와 IA/wireframe 기준 대표 화면은 다음 4개 메인 단계로 구성된다.
 
 1. 위치 입력 및 PNU 변환
-2. 건축 행위 입력 및 정규화
+2. 건축 계획 입력 및 Action JSON 정규화
 3. 판정 결과 및 근거 확인
-4. 대안 시나리오 탐색
-5. 실무 산출물 생성
+4. 실무 산출물 생성
 
-따라서 프론트엔드도 이 5단계를 기능 단위로 반영한다.
+대안 시나리오 탐색은 독립된 메인 단계가 아니라, 3단계 판정 결과 화면에서
+저가능성 또는 고위험 판정이 있을 때 진입하는 3-1 서브 페이지로 설계한다.
+
+따라서 프론트엔드는 글로벌/공통 화면, 프로젝트 대시보드, 4단계 진단 플로우,
+대안 시나리오 서브 페이지, 산출물/보고서 화면을 분리한다.
 
 apps/web/
 ├── src/
@@ -115,31 +118,52 @@ apps/web/
 │   │
 │   ├── pages/
 │   │   ├── HomePage.vue
+│   │   ├── LoginPage.vue
+│   │   ├── RegisterPage.vue
+│   │   ├── AccountSettingsPage.vue
+│   │   ├── NotificationCenterPage.vue
+│   │   ├── SupportPage.vue
+│   │   ├── ServiceIntroPage.vue
+│   │   ├── DataSourcesPage.vue
+│   │   ├── ProjectDashboardPage.vue
 │   │   ├── ProjectListPage.vue
 │   │   ├── ProjectCreatePage.vue
+│   │   ├── ProjectDetailPage.vue
 │   │   ├── DiagnosisWizardPage.vue
+│   │   ├── AlternativeScenarioPage.vue
+│   │   ├── DiagnosisHistoryComparePage.vue
 │   │   └── ReportPreviewPage.vue
 │   │
 │   ├── features/
+│   │   ├── auth/                    # 로그인/회원가입/계정 설정
+│   │   ├── project-dashboard/       # 프로젝트 대시보드, 내 프로젝트 목록
+│   │   ├── project-detail/          # 프로젝트 상세, 저장 보고서, 스냅샷
 │   │   ├── location-select/          # 1단계: 위치 입력 및 PNU 변환
-│   │   ├── action-form/              # 2단계: 건축 행위 입력/정규화
+│   │   ├── action-form/              # 2단계: 건축 계획 입력/Action JSON 정규화
 │   │   ├── diagnosis-result/         # 3단계: 판정 결과/근거 확인
-│   │   ├── alternative-scenario/     # 4단계: 대안 시나리오
-│   │   └── output-generator/         # 5단계: 산출물 생성
+│   │   ├── alternative-scenario/     # 3-1 서브 페이지: 대안 시나리오
+│   │   ├── output-generator/         # 4단계: 산출물 생성
+│   │   ├── diagnosis-history/        # 진단 이력/버전 비교
+│   │   └── support/                  # 조회 실패, 추가정보, 사전협의, 오류 안내
 │   │
 │   ├── components/
 │   │   ├── common/
 │   │   ├── layout/
+│   │   ├── navigation/
 │   │   ├── map/
 │   │   ├── forms/
-│   │   └── evidence/
+│   │   ├── evidence/
+│   │   ├── dashboard/
+│   │   └── report/
 │   │
 │   ├── api/
 │   │   ├── client.ts
+│   │   ├── auth.api.ts
 │   │   ├── project.api.ts
 │   │   ├── location.api.ts
 │   │   ├── diagnosis.api.ts
-│   │   └── report.api.ts
+│   │   ├── report.api.ts
+│   │   └── support.api.ts
 │   │
 │   ├── stores/
 │   │   ├── project.store.ts
@@ -164,6 +188,10 @@ apps/web/
 
 프론트엔드 설계 포인트
 ---------------------
+- IA의 4단계 메인 플로우를 Wizard의 기준으로 삼는다.
+- 대안 시나리오는 메인 단계가 아니라 결과 화면에서 조건부로 분기되는 서브 페이지로 둔다.
+- 글로벌/공통 화면은 홈, 로그인, 회원가입, 마이페이지, 알림, 고객지원, 서비스 소개, 데이터 출처 안내로 분리한다.
+- 프로젝트 영역은 대시보드, 내 프로젝트 목록, 프로젝트 상세, 저장된 보고서, 진단 이력/버전 비교를 포함한다.
 - features 기준으로 나누면 화면 단위와 Use Case 단위가 일치한다.
 - 지도 관련 컴포넌트는 components/map에 분리한다.
 - Evidence Trace, 법령 근거, 절차 판단 결과는 재사용 가능성이 높으므로 components/evidence에 둔다.
@@ -589,11 +617,21 @@ RAG 설계 원칙
 
 초기 API는 다음과 같이 설계하는 것이 좋다.
 
+인증/계정
+---------
+POST   /api/v1/auth/login
+POST   /api/v1/auth/register
+GET    /api/v1/auth/me
+GET    /api/v1/auth/notifications
+
 프로젝트
 --------
 POST   /api/v1/projects
 GET    /api/v1/projects
 GET    /api/v1/projects/{project_id}
+GET    /api/v1/projects/{project_id}/reports
+GET    /api/v1/projects/{project_id}/history
+GET    /api/v1/projects/{project_id}/snapshots/compare
 
 위치/필지
 ---------
@@ -612,6 +650,7 @@ GET    /api/v1/diagnosis/runs/{run_id}/status
 GET    /api/v1/diagnosis/runs/{run_id}/result
 GET    /api/v1/diagnosis/runs/{run_id}/evidence
 GET    /api/v1/diagnosis/runs/{run_id}/trace
+GET    /api/v1/diagnosis/runs/{run_id}/alternatives
 
 보고서
 ------
@@ -619,12 +658,18 @@ POST   /api/v1/reports
 GET    /api/v1/reports/{report_id}
 GET    /api/v1/reports/{report_id}/download
 
+지원/예외 안내
+-------------
+GET    /api/v1/support/failure-reasons
+GET    /api/v1/support/pre-consultation-guides
+
 
 API 설계 포인트
 ---------------
 - 진단은 시간이 오래 걸릴 수 있으므로 diagnosis run을 생성하는 방식이 적합하다.
 - status API 또는 SSE/WebSocket으로 진행률을 제공한다.
 - result, evidence, trace를 분리해서 결과와 근거를 독립적으로 조회할 수 있게 한다.
+- alternatives는 result에서 고위험/저가능성 조건이 확인될 때 호출되는 보조 조회로 둔다.
 - 보고서 생성은 진단 완료 후 별도 API로 분리한다.
 
 
@@ -647,7 +692,7 @@ MVP 1차
   - 개발행위허가
   - 농지전용
 - 법령 근거는 샘플 문서 기반 RAG
-- 결과 화면
+- 4단계 Wizard 결과 화면
 - 체크리스트 생성
 
 MVP 2차
@@ -658,6 +703,7 @@ MVP 2차
 - 건축물대장 API 연동
 - 산지전용/경관심의/교통영향평가 확장
 - Evidence Trace 저장
+- 대안 시나리오 서브 페이지
 - DOCX/PDF 보고서 생성
 
 MVP 3차
@@ -676,7 +722,9 @@ MVP 3차
 
 역할 A: 프론트엔드
 - Vue 3 + TypeScript
-- 5단계 Wizard 화면
+- 4단계 Wizard 화면
+- 대안 시나리오 서브 페이지
+- 프로젝트 대시보드/상세/진단 이력 화면
 - 지도 UI
 - 결과 대시보드
 - 보고서 미리보기/다운로드 UI

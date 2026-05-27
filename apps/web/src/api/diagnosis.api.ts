@@ -7,3 +7,19 @@ export function createDiagnosisRun(payload: unknown) {
   });
 }
 
+export function getDiagnosisResult(runId: string) {
+  return apiFetch(`/api/v1/diagnosis/runs/${runId}/result`);
+}
+
+export function getDiagnosisEvidence(runId: string) {
+  return apiFetch(`/api/v1/diagnosis/runs/${runId}/evidence`);
+}
+
+export function getDiagnosisTrace(runId: string) {
+  return apiFetch(`/api/v1/diagnosis/runs/${runId}/trace`);
+}
+
+export function getAlternativeScenarios(runId: string) {
+  return apiFetch(`/api/v1/diagnosis/runs/${runId}/alternatives`);
+}
+

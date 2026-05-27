@@ -32,3 +32,8 @@ def get_diagnosis_evidence(run_id: str) -> list[dict[str, str]]:
 def get_diagnosis_trace(run_id: str) -> list[dict[str, str]]:
     return []
 
+
+@router.get("/runs/{run_id}/alternatives")
+def get_alternative_scenarios(run_id: str) -> list[dict[str, str]]:
+    return []
+

@@ -1,0 +1,93 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+apps/web/.env
+apps/web/.env.*
+!apps/web/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# FastAPI / local runtime
+*.log
+logs/
+*.pid
+
+# Node / Vue / Vite
+node_modules/
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.vite/
+apps/web/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Docker / local volumes
+.docker/
+docker-data/
+postgres-data/
+qdrant-data/
+redis-data/
+
+# Database and vector index dumps
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.backup
+*.bak
+*.sql.gz
+*.qdrant
+
+# Generated RAG/legal-document artifacts
+data/legal-docs/raw/**/*
+data/legal-docs/parsed/**/*
+data/legal-docs/chunks/**/*
+!data/legal-docs/raw/**/.gitkeep
+!data/legal-docs/parsed/**/.gitkeep
+!data/legal-docs/chunks/**/.gitkeep
+
+# Generated reports and document exports
+reports/
+exports/
+generated/
+data/generated/
+services/document-generator/output/
+*.docx.tmp
+*.pdf.tmp
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local tool caches
+.cache/
+.parcel-cache/
+.turbo/

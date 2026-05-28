@@ -103,17 +103,22 @@ ai-building-permit-manager/
 
 이 README는 **Git Bash / Bash 기준**입니다.
 
-Windows 경로 `C:\Users\mypc\Desktop\newpjt`는 Git Bash에서 보통 아래처럼 이동합니다.
+먼저 프로젝트를 내려받은 위치로 이동합니다. 이후 명령은 모두 **프로젝트 루트**, 즉 `README.md`와 `docker-compose.yml`이 있는 폴더를 기준으로 설명합니다.
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt
+cd path/to/ai-building-permit-manager
 ```
 
 현재 위치 확인:
 
 ```bash
 pwd
+ls
 ```
+
+`ls` 결과에 `apps`, `docs`, `services`, `docker-compose.yml`, `README.md`가 보이면 프로젝트 루트에 있는 상태입니다.
+
+이후 별도 안내가 없으면 모든 명령은 프로젝트 루트에서 실행한다고 가정합니다.
 
 ---
 
@@ -137,7 +142,6 @@ Windows Git Bash에서 `npm`이 실행 정책 문제를 만나면 `npm.cmd`를 �
 루트에서 `.env.example`을 복사해 `.env`를 만듭니다.
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt
 cp .env.example .env
 ```
 
@@ -163,8 +167,9 @@ OPENAI_API_KEY=
 프론트엔드는 현재 mockup이라 API 서버가 없어도 화면 확인이 가능합니다. 나중에 백엔드와 연결할 때 `apps/web/.env`를 만듭니다.
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/web
+cd apps/web
 printf "VITE_API_BASE_URL=http://localhost:8000\n" > .env
+cd ../..
 ```
 
 API 키는 브라우저에 노출되면 안 됩니다. 외부 API 키는 루트 `.env`에만 둡니다.
@@ -176,7 +181,7 @@ API 키는 브라우저에 노출되면 안 됩니다. 외부 API 키는 루트 
 회의에서 화면만 확인하려면 이 단계만 해도 됩니다.
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/web
+cd apps/web
 npm.cmd install
 npm.cmd run dev
 ```
@@ -214,7 +219,6 @@ npm.cmd run build
 PostgreSQL/PostGIS, Redis, Qdrant는 루트의 `docker-compose.yml`로 실행합니다.
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt
 docker compose up -d
 docker compose ps
 ```
@@ -264,7 +268,7 @@ curl http://localhost:6333/healthz
 ## 9. 백엔드 실행
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/api
+cd apps/api
 python -m venv .venv
 source .venv/Scripts/activate
 python -m pip install --upgrade pip
@@ -312,7 +316,7 @@ curl http://localhost:8000/health
 화면 mockup만 볼 때:
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/web
+cd apps/web
 npm.cmd install
 npm.cmd run dev
 ```
@@ -322,7 +326,6 @@ npm.cmd run dev
 Terminal 1: Infrastructure
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt
 docker compose up -d
 docker compose ps
 ```
@@ -330,7 +333,7 @@ docker compose ps
 Terminal 2: Backend
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/api
+cd apps/api
 source .venv/Scripts/activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -338,7 +341,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 Terminal 3: Frontend
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/web
+cd apps/web
 npm.cmd run dev
 ```
 
@@ -356,14 +359,13 @@ npm.cmd run dev
 Python 문법 확인:
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt
 python -m compileall apps/api/app services scripts
 ```
 
 Backend import 확인:
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/api
+cd apps/api
 source .venv/Scripts/activate
 python -c "from app.main import app; print(app.title)"
 ```
@@ -371,7 +373,7 @@ python -c "from app.main import app; print(app.title)"
 Frontend build 확인:
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/web
+cd apps/web
 npm.cmd run build
 ```
 
@@ -409,7 +411,7 @@ PowerShell 명령인 `.\.venv\Scripts\Activate.ps1`는 Bash에서 쓰지 않습�
 가상환경이 켜져 있지 않거나 패키지가 설치되지 않은 상태입니다.
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/api
+cd apps/api
 source .venv/Scripts/activate
 pip install -e .
 ```
@@ -419,7 +421,7 @@ pip install -e .
 `apps/api` 폴더 밖에서 Uvicorn을 실행했을 가능성이 큽니다.
 
 ```bash
-cd /c/Users/mypc/Desktop/newpjt/apps/api
+cd apps/api
 uvicorn app.main:app --reload
 ```
 

@@ -1,7 +1,37 @@
 <script setup lang="ts">
 import { ArrowRight, CheckCircle2, ClipboardList, FilePlus2, MapPinned, ShieldCheck } from "@lucide/vue";
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { createProject } from "../api/project.api";
+import { projectRows } from "../app/mockData";
 import PageHeader from "../components/common/PageHeader.vue";
 import AppShell from "../components/layout/AppShell.vue";
+import { useProjectStore } from "../stores/project.store";
+
+const router = useRouter();
+const projectStore = useProjectStore();
+const isCreating = ref(false);
+
+async function startDiagnosis() {
+  const prototypeProject = projectRows[0];
+  isCreating.value = true;
+  try {
+    const project = await createProject({
+      name: prototypeProject.name,
+      address: prototypeProject.address,
+      pnu: prototypeProject.pnu,
+      description: "prototype diagnosis workspace",
+    });
+    projectStore.currentProjectId = project.id;
+    projectStore.currentParcelId = null;
+    projectStore.currentRegulationOverlayId = null;
+    projectStore.currentActionId = null;
+    projectStore.currentDiagnosisRunId = null;
+  } finally {
+    isCreating.value = false;
+    await router.push("/projects/demo/diagnosis");
+  }
+}
 </script>
 
 <template>
@@ -27,7 +57,7 @@ import AppShell from "../components/layout/AppShell.vue";
           <div class="field"><label>대상 지역</label><input class="input" value="서울특별시 강남구 역삼동" /></div>
           <div class="field"><label>희망 건축행위</label><select class="select"><option>신축 · 업무시설</option></select></div>
           <div class="field"><label>메모</label><textarea class="textarea">신축 가능성과 조건부 절차를 우선 확인합니다.</textarea></div>
-          <RouterLink class="button primary" to="/projects/demo/diagnosis"><ArrowRight />진단 흐름으로 이동</RouterLink>
+          <button class="button primary" type="button" :disabled="isCreating" @click="startDiagnosis"><ArrowRight />진단 흐름으로 이동</button>
         </div>
       </div>
 

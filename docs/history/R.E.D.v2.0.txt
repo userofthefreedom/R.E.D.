@@ -1,0 +1,216 @@
+R.E.D.v2.0
+==========
+
+작성일: 2026-05-29
+프로젝트: AI 건축 인허가 매니저
+팀: R.E.D. (Real Estate Developer)
+
+
+1. v2.0의 의미
+--------------
+
+v1.2까지의 핵심은 "화면 중심 프로토타입에 백엔드 DB/API 스캐폴딩을 붙이는 것"이었다.
+v2.0부터는 다음 이유로 버전을 올린다.
+
+- 지도 클릭이 실제 OpenLayers 지도 위에서 동작한다.
+- 지도 클릭 좌표가 백엔드 Location Resolve API로 전달된다.
+- 백엔드는 VWorld 역지오코딩을 우선 시도하고, 실패 시 prototype 후보로 fallback한다.
+- 선택한 대상지, 건축계획, 진단 실행이 DB/API 흐름으로 연결된다.
+- 최소 룰엔진이 저장된 Parcel/Action을 읽어 조건부 절차와 Rule Trace를 반환한다.
+
+즉, v2.0은 "프로토타입 화면"에서 "실제 데이터 연결을 시작한 세로 흐름"으로 넘어간 버전이다.
+
+
+2. v1.2 대비 달라진 점
+----------------------
+
+2.1 지도 클릭 기반 대상지 선택
+
+- apps/web/src/components/map/ParcelMapMock.vue가 OpenLayers 지도 클릭 이벤트를 처리한다.
+- 사용자가 지도 위를 클릭하면 pin과 선택 polygon이 클릭 위치로 이동한다.
+- 기존에는 선택 시 강제로 zoom이 바뀌었지만, 현재는 사용자의 zoom level을 유지한다.
+- 후보 목록에서 다른 후보를 클릭하면 선택 대지 정보가 갱신된다.
+- 후보 row hover/selected 상태를 보강했다.
+
+2.2 VWorld 역지오코딩 1차 연결
+
+- apps/api/app/clients/vworld_client.py를 구현했다.
+- Location Resolve API는 지도 클릭 좌표를 VWorld Address API에 전달한다.
+- VWorld 응답에서 도로명주소, 지번주소, 법정동코드 후보를 구성한다.
+- VWorld 지적도 geometry 조회도 시도하지만, 권한/응답 상태에 따라 실패할 수 있으므로 mock geometry fallback을 유지한다.
+- API 키 값은 문서에 기록하지 않는다.
+
+2.3 Location Resolve API 확장
+
+- POST /api/v1/locations/resolve가 query, mode, lon, lat를 받는다.
+- mode는 address, coordinate, map_click 흐름을 지원한다.
+- 응답에는 candidates, provider, status, centroid, geometry_geojson, source_name이 포함된다.
+- provider는 VWorld 응답 성공 시 vworld, fallback 시 prototype-location-resolver로 표시된다.
+
+2.4 Wizard 저장 흐름 안정화
+
+- 1단계에서 선택한 Parcel/RegulationOverlay를 DB에 저장한다.
+- 2단계에서 Action을 DB에 저장한다.
+- 같은 Wizard 안에서 뒤로 갔다가 다시 넘어갈 때 중복 저장되지 않도록 Pinia store에 id를 보관한다.
+- Parcel 또는 Action 입력이 바뀌면 기존 DiagnosisRun/result를 무효화한다.
+
+2.5 건축계획 입력 state 연결
+
+- 2단계 건축계획 입력 화면이 고정 mock value에서 Vue state 기반으로 바뀌었다.
+- 행위 유형, 현재 용도, 희망 용도, 대지면적, 건축면적, 연면적, 층수, 주차대수, site condition checkbox, 사업목적을 수정할 수 있다.
+- 입력값은 Action JSON 미리보기와 실제 Action 저장 payload에 반영된다.
+
+2.6 DiagnosisRun/result 최소 흐름
+
+- POST /api/v1/diagnosis/runs가 저장된 Project/Action을 기준으로 DiagnosisRun을 만든다.
+- GET /api/v1/diagnosis/runs/{run_id}/status가 상태를 반환한다.
+- GET /api/v1/diagnosis/runs/{run_id}/result가 최소 룰엔진 결과를 반환한다.
+
+2.7 최소 Rule Engine 구현
+
+- apps/api/app/services/rule_engine_service.py를 추가했다.
+- 저장된 Parcel/Action을 읽어 다음 항목을 반환한다.
+  - 종합 판정
+  - 주 인허가 유형
+  - 리스크 레벨
+  - 누락정보
+  - 조건부 절차 목록
+  - Rule Trace
+  - input snapshot
+- 현재 룰은 코드 기반 최소 룰이며, YAML RuleLoader/RuleEvaluator는 다음 단계다.
+
+2.8 결과 화면 Rule Trace 표시
+
+- 3단계 결과 화면은 백엔드 diagnosis result가 있으면 그 값을 우선 표시한다.
+- 조건부 절차 목록, 누락정보, 판정 요약이 API 결과 기반으로 갱신된다.
+- Rule Trace / 입력 스냅샷 패널을 추가해 판단에 사용된 입력과 룰 결과를 보여준다.
+
+2.9 Smoke test 고정
+
+- apps/api/tests/test_diagnosis_flow.py를 추가했다.
+- pytest를 apps/api/pyproject.toml 의존성에 추가했다.
+- 테스트는 Project -> Parcel -> Action -> DiagnosisRun -> Result 세로 흐름을 확인한다.
+
+
+3. 현재까지 된 것
+----------------
+
+- OpenLayers 실제 지도 타일 표시
+- 지도 클릭 기반 대상지 선택 UX
+- VWorld 역지오코딩 1차 연결
+- VWorld 지적도 geometry 조회 시도 및 fallback 구조
+- Project create/list/get/update
+- Project 하위 Parcel, Building, Action, RegulationOverlay create/list
+- project_id/parcel_id/action_id 소속 검증 일부
+- DiagnosisRun create/get/status
+- Diagnosis result 최소 API
+- 최소 Rule Engine
+- Rule Trace API 응답 및 화면 표시
+- Action 입력 state와 Action JSON 저장
+- Alembic initial schema 적용
+- pytest 기반 진단 세로 흐름 테스트
+- PPT용 capture 산출물 일부
+
+
+4. 아직 안 된 것
+----------------
+
+4.1 인증/권한
+
+- 실제 회원가입/로그인
+- JWT 발급/검증
+- Project owner_id와 현재 사용자 연결
+- 프로젝트별 접근 권한 제어
+
+4.2 위치/공공데이터
+
+- VWorld 지적도 geometry 조회의 권한/응답 안정화
+- 실제 PNU 생성/검증 로직 고도화
+- 도로명주소 API client 연결
+- 건축HUB 건축물대장 조회
+- 토지이용계획 조회
+- 공간규제 레이어 조회 및 PostGIS 중첩
+- 데이터 기준일자/수집시각 정책
+- API 실패/캐시/재시도 정책
+
+4.3 룰엔진
+
+- YAML rule schema 확정
+- RuleLoader 구현
+- RuleEvaluator 구현
+- RuleExecutionTrace DB 저장
+- ProcedureResult DB 저장
+- 용도변경, 농지전용, 산지전용, 경관심의, 교통영향평가, 하수도 협의 등 룰 확장
+
+4.4 RAG/Evidence
+
+- 법령/조례 원문 수집
+- 지구단위계획 PDF 수집
+- 문서 파싱/청킹
+- Qdrant indexing
+- Hybrid retrieval
+- EvidenceSelector
+- EvidenceTrace DB 저장
+- Evidence panel 실제 데이터 연결
+
+4.5 문서 생성
+
+- 체크리스트 생성
+- 필요서류 목록 생성
+- 사전협의 질문 생성
+- 신청서/신고서 초안 생성
+- 종합 보고서 생성
+- DOCX/PDF 다운로드
+- Report version 저장
+
+4.6 프론트엔드
+
+- Dashboard/List/Detail 전반의 API 응답 표시 정책 정교화
+- Wizard 에러/로딩/재시도 UX 보강
+- 실제 Evidence panel 연결
+- 보고서 생성/다운로드 연결
+- 발표용 최신 화면 capture 갱신
+- 모바일 레이아웃 세부 정리
+
+
+5. 다음 작업 제안
+----------------
+
+1) VWorld 지적도 geometry/PNU 조회를 안정화한다.
+2) Location Resolve 결과를 Parcel Profile 생성 API와 더 명확히 분리한다.
+3) Rule Engine을 YAML 기반 RuleLoader/RuleEvaluator 구조로 바꾼다.
+4) DiagnosisResult, ProcedureResult, RuleExecutionTrace를 DB에 저장한다.
+5) EvidenceTrace/RAG 검색 stub을 만들어 Rule result와 연결한다.
+6) 3단계 Evidence panel을 실제 API 응답으로 교체한다.
+7) 체크리스트/보고서 생성 API의 최소 mock을 만든다.
+8) Project owner 인증 연결을 시작한다.
+9) 발표용 capture 폴더를 v2.0 화면 기준으로 갱신한다.
+
+
+6. 검증 명령
+------------
+
+프론트 build:
+
+cd apps/web
+npm.cmd run build
+
+백엔드 compile:
+
+cd apps/api
+.venv\Scripts\python.exe -m compileall app
+
+진단 세로 흐름 pytest:
+
+cd apps/api
+.venv\Scripts\python.exe -m pytest tests/test_diagnosis_flow.py -q
+
+
+7. 주의사항
+-----------
+
+- .env와 API 키 값은 문서에 기록하지 않는다.
+- 현재 VWorld 연결은 역지오코딩 중심이며, 지적도 geometry는 권한/응답에 따라 fallback될 수 있다.
+- 현재 Rule Engine은 최소 코드 기반 룰이며 법령 해석을 대체하지 않는다.
+- LLM은 판단자가 아니라 산출물 문장 생성 보조자로 유지한다.
+- 최종 인허가 여부는 관할 행정청의 최종 판단 대상이다.

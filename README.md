@@ -15,16 +15,16 @@ AI 건축 인허가 매니저는 사용자가 주소, 지번, 좌표, 지도 클
 
 ## 1. 현재 구현 상태
 
-현재는 **프론트엔드 mockup + 백엔드 DB/API 스캐폴딩** 단계입니다.
+현재는 **실제 지도/위치 API 일부 연결 + DB 저장형 진단 세로 흐름 + 최소 룰엔진** 단계입니다.
 
-- Frontend: Vue 3 + TypeScript + Vite 기반 mockup 화면 구현 및 PPT 캡처용 레이아웃 정리
-- Backend: FastAPI 라우터, SQLAlchemy 모델, DB session, repository/service, Project 기본 CRUD 구성
+- Frontend: Vue 3 + TypeScript + Vite 기반 화면 구현, OpenLayers 지도 클릭/선택 UX, 건축계획 state 기반 Action JSON 생성, 룰 결과/Rule Trace 표시
+- Backend: FastAPI 라우터, SQLAlchemy 모델, DB session, repository/service, Project 및 대상지 프로파일 CRUD, DiagnosisRun/Result 최소 흐름 구성
 - Infrastructure: PostgreSQL/PostGIS, Redis, Qdrant Docker Compose 구성
-- Migration: Alembic 설정과 migration 디렉터리 구성, 실제 revision 생성은 다음 단계
-- Data/AI: 룰엔진, RAG, LLM, 문서 생성 폴더 구조와 초기 룰/메타데이터 준비
+- Migration: Alembic initial schema revision 생성 및 PostgreSQL/PostGIS 적용 확인
+- Data/AI: VWorld 역지오코딩 연결, 지도 클릭 기반 위치 후보 생성, 최소 룰엔진 결과 API, RAG/LLM/문서 생성 폴더 구조와 초기 룰/메타데이터 준비
 - Capture: 발표/PPT 삽입용 전체 화면 캡처는 `capture/` 폴더에 저장
 
-프론트 mockup은 백엔드 연결 없이 화면 검토용으로 실행할 수 있습니다. 백엔드는 현재 Project CRUD를 제외하면 대부분 mock 또는 `not_implemented` 응답입니다.
+프론트 화면은 아직 발표용 prototype 톤을 유지하지만, `/dashboard`, `/projects`, `/projects/new`, `/projects/demo/diagnosis`의 주요 흐름은 백엔드 API를 호출합니다. 진단 Wizard에서는 OpenLayers 지도 클릭 좌표를 백엔드 Location Resolve API로 보내고, 백엔드는 VWorld 역지오코딩을 우선 시도한 뒤 실패 시 mock 후보로 fallback합니다. 선택한 Parcel, RegulationOverlay, Action은 DB에 저장되고, DiagnosisRun 생성 후 최소 룰엔진 결과와 Rule Trace를 조회해 3단계 결과 화면에 표시합니다.
 
 ---
 
@@ -40,6 +40,7 @@ AI 건축 인허가 매니저는 사용자가 주소, 지번, 좌표, 지도 클
 - Vue Router
 - Pinia
 - `@lucide/vue`
+- OpenLayers `ol`
 
 ### Backend
 
@@ -218,6 +219,18 @@ npm.cmd run build
 - `/support` 지원/예외 안내
 - `/data-sources` 데이터 출처 및 면책 안내
 
+현재 실제 API가 연결된 주요 흐름:
+
+- 지도 클릭 또는 주소 검색 기반 Location Resolve
+- Project 생성 및 목록 조회
+- Project 하위 Parcel / Building / Action / RegulationOverlay create/list
+- DiagnosisRun 생성 및 status/result 조회
+- 최소 Rule Engine 기반 조건부 절차, 누락정보, Rule Trace 반환
+
+발표/PPT용 실제 지도 타일 화면 캡처:
+
+- `capture/diagnosis-step1-real-map.png`
+
 ---
 
 ## 8. 인프라 실행
@@ -324,7 +337,7 @@ source .venv/Scripts/activate
 alembic -c alembic.ini heads
 ```
 
-현재는 migration 환경만 준비된 상태입니다. 실제 DB 테이블 생성용 revision은 별도 작업에서 생성합니다.
+현재 initial schema revision은 `f5879b1bd8bb`이며, `alembic upgrade head`로 앱 테이블 17개를 생성할 수 있습니다.
 
 ---
 
@@ -454,6 +467,14 @@ source .venv/Scripts/activate
 alembic -c alembic.ini heads
 ```
 
+진단 세로 흐름 테스트:
+
+```bash
+cd apps/api
+source .venv/Scripts/activate
+python -m pytest tests/test_diagnosis_flow.py -q
+```
+
 Frontend build 확인:
 
 ```bash
@@ -537,15 +558,15 @@ docker info
 
 ## 13. 앞으로 구현할 주요 작업
 
-1. Alembic 첫 migration revision 생성 및 DB upgrade 검증
-2. Project CRUD에 인증 사용자 소유권 연결
-3. Parcel, Building, Action, RegulationOverlay 기본 CRUD 추가
-4. Location resolve 스텁을 실제 PNU 변환 흐름으로 확장
-5. Action JSON schema 정의
-6. 룰셋 YAML schema와 Rule Engine 최소 구현
+1. Project CRUD에 인증 사용자 소유권 연결
+2. Parcel, Building, Action, RegulationOverlay 상세/update/delete 구현
+3. VWorld 지적도 geometry 권한/응답 안정화 및 PNU 생성 로직 고도화
+4. 건축HUB, 토지이용계획, 공간규제 레이어 API 연결
+5. 최소 Rule Engine을 YAML RuleLoader/RuleEvaluator 구조로 확장
+6. DiagnosisResult, ProcedureResult, RuleExecutionTrace DB 저장 연결
 7. 샘플 법령 chunk와 RAG 검색 스텁 구현
-8. DiagnosisRun 비동기 실행 구조 추가
-9. Rule Trace와 Evidence Trace 저장 흐름 연결
-10. 체크리스트와 보고서 HTML/DOCX 생성
+8. Evidence panel을 실제 EvidenceTrace/RAG 결과로 교체
+9. 체크리스트와 보고서 HTML/DOCX 생성
+10. 화면 캡처 산출물 최신화 및 발표용 flow 검증
 
 MVP 1차는 전국 실데이터 완성이 아니라, 샘플 필지와 샘플 법령 근거로 진단 플로우가 끝까지 도는 세로 흐름을 만드는 것을 목표로 합니다.

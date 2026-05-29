@@ -513,12 +513,26 @@ p {
   fill: var(--color-primary-deep);
 }
 
+.map-mock.actual-map {
+  background: #e6edf5;
+}
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.map-canvas .ol-viewport {
+  border-radius: 8px;
+}
+
 .map-tools {
   position: absolute;
   left: 16px;
   top: 16px;
   display: grid;
   gap: 8px;
+  z-index: 3;
 }
 
 .tool-square {
@@ -598,6 +612,30 @@ p {
   background: #ffffff;
   box-shadow: var(--shadow);
   font-size: 12px;
+}
+
+.map-watermark {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(63, 111, 159, 0.24);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-primary-deep);
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(23, 37, 52, 0.12);
+}
+
+.map-watermark svg {
+  width: 15px;
+  height: 15px;
 }
 
 .map-legend {
@@ -831,11 +869,19 @@ p {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.candidate-list li:hover {
+  border-color: var(--color-primary-border);
+  box-shadow: 0 8px 18px rgba(36, 52, 71, 0.08);
 }
 
 .candidate-list li.selected {
   border-color: var(--color-primary-border);
   background: var(--color-primary-pale);
+  box-shadow: inset 3px 0 0 var(--color-primary-deep);
 }
 
 .candidate-list span {
@@ -861,6 +907,50 @@ p {
   background: #f8fafc;
   font-weight: 700;
   color: var(--color-slate);
+}
+
+.trace-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+  gap: 14px;
+}
+
+.trace-snapshot,
+.trace-rule {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.trace-snapshot {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.trace-snapshot strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.trace-rule-list {
+  display: grid;
+  gap: 10px;
+}
+
+.trace-rule {
+  display: grid;
+  gap: 4px;
+}
+
+.trace-rule strong {
+  color: var(--text);
+}
+
+.trace-rule small {
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .evidence-panel {

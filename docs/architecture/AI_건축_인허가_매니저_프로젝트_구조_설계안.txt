@@ -26,9 +26,9 @@ AI 건축 인허가 매니저 프로젝트 폴더/파일 구조 설계안
 
 2026-05-29 기준 현재 repo는 다음 상태이다.
 
-- apps/web: Vue 3 + TypeScript + Vite 기반 mockup 화면 구현 완료
-- apps/api: FastAPI 라우터, SQLAlchemy 모델, DB session, repository/service, Project 기본 CRUD 구성
-- apps/api/app/db/migrations: Alembic 환경 구성 완료, 실제 revision 생성은 다음 단계
+- apps/web: Vue 3 + TypeScript + Vite 기반 화면 구현, OpenLayers 실제 지도 클릭/선택 UX, Action JSON state 연결, Rule Trace 표시
+- apps/api: FastAPI 라우터, SQLAlchemy 모델, DB session, repository/service, Project 및 대상지 프로파일 기본 CRUD, DiagnosisRun/result 최소 흐름 구성
+- apps/api/app/db/migrations: Alembic initial schema revision 생성 및 DB upgrade 검증 완료
 - services: location, public-data, rule-engine, rag, llm, document-generator 폴더와 초기 스텁 구성
 - data: rules, legal-docs/raw, parsed, chunks, metadata, seed, samples 구조 구성
 - docs/api: API 키 신청 가이드 위치로 사용
@@ -36,10 +36,10 @@ AI 건축 인허가 매니저 프로젝트 폴더/파일 구조 설계안
 
 아직 구현 전이거나 mock/stub 상태인 영역은 다음과 같다.
 
-- 실제 PNU 변환 및 VWorld/OpenLayers 지도 연동
+- VWorld 역지오코딩은 1차 연결되었고, 지적도 geometry/PNU 정밀 변환은 추가 안정화 필요
 - 건축HUB, 토지이용계획, 국가법령정보 API 실연동
-- DiagnosisRun 비동기 실행 및 진행 상태 전달
-- Rule Engine 실행 결과와 Rule Trace 저장 연결
+- DiagnosisRun 생성/status/result 최소 흐름은 구현되었고, 비동기 실행 및 DB trace 저장은 추가 구현 필요
+- 최소 Rule Engine 실행 결과와 Rule Trace API 응답은 구현되었고, YAML 기반 RuleLoader/DB 저장은 추가 구현 필요
 - RAG 검색, Evidence Trace 저장, Qdrant 인덱싱
 - LLM 기반 체크리스트/질문/보고서 생성과 DOCX/PDF 변환
 
@@ -222,6 +222,8 @@ apps/web/
 - 프로젝트 영역은 대시보드, 내 프로젝트 목록, 프로젝트 상세, 저장된 보고서, 진단 이력/버전 비교를 포함한다.
 - features 기준으로 나누면 화면 단위와 Use Case 단위가 일치한다.
 - 지도 관련 컴포넌트는 components/map에 분리한다.
+- 현재 지도 화면은 OpenLayers 지도 타일 위에서 클릭 좌표를 Location Resolve API로 전달하고, VWorld 역지오코딩 결과 또는 fallback 후보를 선택 상태로 반영한다.
+- 지도 polygon은 VWorld 지적도 geometry가 오면 실제 geometry를 그리고, 없으면 클릭 좌표 주변 prototype polygon으로 fallback한다.
 - Evidence Trace, 법령 근거, 절차 판단 결과는 재사용 가능성이 높으므로 components/evidence에 둔다.
 - Pinia 또는 Vue Store는 프로젝트 상태, Wizard 진행 상태, 인증 상태로 분리한다.
 - API 파일은 도메인 단위로 나누어 유지보수성을 확보한다.
@@ -344,7 +346,8 @@ apps/api/
 - services는 비즈니스 로직을 담당한다.
 - workers는 장시간 작업, 비동기 작업, 문서 생성 작업을 담당한다.
 - 현재 Project CRUD는 SQLAlchemy repository/service를 통해 DB와 연결되어 있다.
-- 현재 Alembic은 환경 설정만 완료되어 있으며, 첫 revision 생성과 DB upgrade는 다음 작업이다.
+- 현재 Parcel, Building, Action, RegulationOverlay 기본 create/list endpoint가 Project 하위에 구성되어 있다.
+- Alembic initial schema revision f5879b1bd8bb가 생성되었고 PostgreSQL/PostGIS에 적용 검증되었다.
 
 
 4. 도메인 서비스 구조: services/
@@ -723,7 +726,10 @@ API 설계 포인트
 - result, evidence, trace를 분리해서 결과와 근거를 독립적으로 조회할 수 있게 한다.
 - alternatives는 result에서 고위험/저가능성 조건이 확인될 때 호출되는 보조 조회로 둔다.
 - 보고서 생성은 진단 완료 후 별도 API로 분리한다.
-- 현재 구현 기준으로 Project create/list/get/update는 DB와 연결되어 있고, 나머지는 mock/stub 성격이 강하다.
+- 현재 구현 기준으로 Project create/list/get/update는 DB와 연결되어 있고, Project 하위 리소스와 DiagnosisRun/result 일부 흐름도 DB/API와 연결되어 있다.
+- Project 하위 Parcel, Building, Action, RegulationOverlay create/list도 DB와 연결되어 있다.
+- 프론트 Wizard는 단계 이동 시 Parcel, RegulationOverlay, Action을 실제 API에 저장하고, DiagnosisRun 생성 후 최소 룰엔진 결과를 조회한다.
+- /api/v1/diagnosis/runs/{run_id}/result는 저장된 Parcel/Action을 기반으로 조건부 절차, 누락정보, Rule Trace를 반환한다.
 - 인증 라우터는 존재하지만 실제 JWT 발급/검증과 Project owner 접근 제어 연결은 다음 작업이다.
 
 
@@ -735,14 +741,14 @@ API 설계 포인트
 
 MVP 1차
 -------
-- 주소/지번 입력 mockup
-- PNU 변환은 Mock 또는 일부 지역 샘플로 처리
+- 주소/지번/지도 클릭 기반 Location Resolve
+- VWorld 역지오코딩 및 mock fallback 후보 처리
 - Parcel Profile 저장 구조
-- 건축 행위 입력 Form mockup
-- Action JSON 생성 구조
+- 건축 행위 입력 Form state와 Action JSON 생성 구조
 - SQLAlchemy 모델과 Alembic 환경
-- Project 기본 CRUD
-- 간단 룰엔진
+- Project 기본 CRUD 및 하위 리소스 create/list
+- DiagnosisRun 생성/status/result API
+- 최소 룰엔진
 - 조건부 절차 3개 이상 판별
   - 용도변경
   - 개발행위허가
@@ -753,12 +759,12 @@ MVP 1차
 
 MVP 2차
 -------
-- 지도 클릭 실연동
-- VWorld/OpenLayers 연동
+- VWorld 지적도 geometry/PNU 정밀 변환 안정화
+- OpenLayers tile/vector provider 고도화
 - PostGIS 공간 중첩
 - 건축물대장 API 연동
 - 산지전용/경관심의/교통영향평가 확장
-- Evidence Trace 저장 연결
+- RuleExecutionTrace/Evidence Trace 저장 연결
 - 대안 시나리오 실제 생성
 - DOCX/PDF 보고서 생성
 

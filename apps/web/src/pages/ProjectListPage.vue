@@ -1,8 +1,21 @@
 <script setup lang="ts">
 import { Search } from "@lucide/vue";
-import { projectRows } from "../app/mockData";
+import { onMounted, ref } from "vue";
+import { listProjects } from "../api/project.api";
+import { projectRows as mockProjectRows } from "../app/mockData";
 import PageHeader from "../components/common/PageHeader.vue";
 import AppShell from "../components/layout/AppShell.vue";
+import { rowsFromApiProjects } from "../utils/projectRows";
+
+const projectRows = ref(mockProjectRows);
+
+onMounted(async () => {
+  try {
+    projectRows.value = rowsFromApiProjects(await listProjects());
+  } catch {
+    projectRows.value = mockProjectRows;
+  }
+});
 </script>
 
 <template>

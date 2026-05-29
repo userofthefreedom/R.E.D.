@@ -1,9 +1,22 @@
 <script setup lang="ts">
 import { Bell, FileText, FolderKanban, Hourglass, PlusCircle } from "@lucide/vue";
-import { projectRows, recentNotifications, savedReports } from "../app/mockData";
+import { onMounted, ref } from "vue";
+import { listProjects } from "../api/project.api";
+import { projectRows as mockProjectRows, recentNotifications, savedReports } from "../app/mockData";
 import PageHeader from "../components/common/PageHeader.vue";
 import StatCard from "../components/common/StatCard.vue";
 import AppShell from "../components/layout/AppShell.vue";
+import { rowsFromApiProjects } from "../utils/projectRows";
+
+const projectRows = ref(mockProjectRows);
+
+onMounted(async () => {
+  try {
+    projectRows.value = rowsFromApiProjects(await listProjects());
+  } catch {
+    projectRows.value = mockProjectRows;
+  }
+});
 </script>
 
 <template>

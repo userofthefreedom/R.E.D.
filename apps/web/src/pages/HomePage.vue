@@ -16,7 +16,7 @@ import ParcelMapMock from "../components/map/ParcelMapMock.vue";
         </p>
         <div class="topbar-actions">
           <RouterLink class="button primary" to="/projects/new"><ArrowRight />새 진단 시작</RouterLink>
-          <RouterLink class="button" to="/dashboard">데모 보기</RouterLink>
+          <RouterLink class="button" to="/dashboard">대시보드 보기</RouterLink>
         </div>
       </div>
       <div class="panel" style="min-width: min(460px, 100%)">
@@ -50,7 +50,7 @@ import ParcelMapMock from "../components/map/ParcelMapMock.vue";
       <div class="flow-strip">
         <div class="flow-step"><ClipboardCheck /><strong>1. 주소 입력 및 PNU 확인</strong></div>
         <div class="flow-step"><ClipboardCheck /><strong>2. 건축계획 입력 및 조건 설정</strong></div>
-        <div class="flow-step"><ClipboardCheck /><strong>3. AI 진단 및 판정 확인</strong></div>
+        <div class="flow-step"><ClipboardCheck /><strong>3. 판정 및 근거 확인</strong></div>
         <div class="flow-step"><ClipboardCheck /><strong>4. 리포트 생성 및 저장</strong></div>
       </div>
     </section>

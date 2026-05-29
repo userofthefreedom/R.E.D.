@@ -19,10 +19,13 @@ import {
   <div class="app-shell">
     <aside class="sidebar">
       <RouterLink class="brand" to="/">
-        <span class="brand-mark">AI</span>
-        <span>
+        <span class="brand-mark" aria-hidden="true">
+          <span class="brand-letter">P</span>
+          <span class="brand-check"></span>
+        </span>
+        <span class="brand-copy">
           <strong>건축 인허가 매니저</strong>
-          <span>사전진단 워크스페이스</span>
+          <span class="brand-subtitle">사전진단 워크스페이스</span>
         </span>
       </RouterLink>
 
@@ -54,7 +57,7 @@ import {
       <header class="topbar">
         <div class="topbar-title">
           <ClipboardCheck />
-          <span>Mockup preview · 백엔드 연결 전 화면 검토용</span>
+          <span>실무 검토 워크스페이스 · 데이터 기준과 판정 근거 추적</span>
         </div>
         <div class="topbar-actions">
           <RouterLink class="button ghost" to="/notifications"><Bell />알림</RouterLink>

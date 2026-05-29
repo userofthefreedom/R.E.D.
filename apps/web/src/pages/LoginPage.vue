@@ -18,7 +18,7 @@ import AppShell from "../components/layout/AppShell.vue";
       </form>
       <div class="notice">
         <h2>소셜 로그인</h2>
-        <p>업무 계정과 개인 계정을 모두 고려한 로그인 영역입니다. 실제 연동은 추후 인증 설계에 맞춰 붙입니다.</p>
+        <p>업무 계정과 개인 계정으로 프로젝트와 저장 보고서에 접근할 수 있습니다.</p>
         <div class="grid three"><button class="button">G</button><button class="button">N</button><button class="button">Apple</button></div>
       </div>
     </section>

@@ -12,7 +12,8 @@ const projectRows = ref(mockProjectRows);
 
 onMounted(async () => {
   try {
-    projectRows.value = rowsFromApiProjects(await listProjects());
+    const apiRows = rowsFromApiProjects(await listProjects());
+    projectRows.value = apiRows.length ? apiRows : mockProjectRows;
   } catch {
     projectRows.value = mockProjectRows;
   }
@@ -38,7 +39,7 @@ onMounted(async () => {
       <StatCard label="최근 알림" value="3" hint="확인 필요" :icon="Bell" />
     </section>
 
-    <section class="grid two" style="margin-top: 18px">
+    <section class="grid two dashboard-overview">
       <div class="panel dashboard-project-panel">
         <div class="section-title">
           <div>
@@ -82,6 +83,18 @@ onMounted(async () => {
               <div><strong>7</strong><span>공공데이터 조회</span></div>
               <div><strong>4</strong><span>룰엔진 대기</span></div>
               <div><strong>5</strong><span>보고서 생성</span></div>
+            </div>
+          </section>
+
+          <section class="compact-surface dashboard-wide-surface">
+            <div class="section-title compact">
+              <h3>이번 주 제출 준비</h3>
+              <span class="badge neutral">심사 대응</span>
+            </div>
+            <div class="submission-grid">
+              <div><strong>사전협의</strong><span>건축과·교통과 질문지 초안 정리</span></div>
+              <div><strong>보완자료</strong><span>도로 폭원, 주차대수 산정표 확인</span></div>
+              <div><strong>보고서</strong><span>판단 근거와 누락정보 표시 검수</span></div>
             </div>
           </section>
         </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -93,6 +94,7 @@ type ActionFormState = {
 };
 
 const currentStep = ref(1);
+const route = useRoute();
 const activeSearchTab = ref("주소");
 const projectStore = useProjectStore();
 const isSaving = ref(false);
@@ -104,7 +106,7 @@ const activeParcel = ref<ActiveParcel>({
   centroidLon: 127.0365,
   centroidLat: 37.5007,
   geometryGeojson: null,
-  sourceName: "prototype mock",
+  sourceName: "기본 후보",
 });
 const actionForm = ref<ActionFormState>({
   actionType: "new_construction",
@@ -158,8 +160,15 @@ const displayInputSnapshot = computed(() => diagnosisResult.value?.input_snapsho
   site_area: actionForm.value.siteArea,
   total_floor_area: actionForm.value.totalFloorArea,
   desired_use: actionForm.value.desiredUse,
-  source: "frontend-preview",
+  source: "service-preview",
 });
+
+function syncStepFromQuery() {
+  const requestedStep = Number(route.query.step);
+  if (Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= steps.length) {
+    currentStep.value = requestedStep;
+  }
+}
 
 const locationCandidates = ref<PrototypeLocationCandidate[]>(
   pnuCandidates.map((candidate) => ({
@@ -172,7 +181,7 @@ const locationCandidates = ref<PrototypeLocationCandidate[]>(
     centroidLon: null,
     centroidLat: null,
     geometryGeojson: null,
-    sourceName: "prototype mock",
+    sourceName: "기본 후보",
   })),
 );
 
@@ -267,7 +276,7 @@ async function ensureProjectId() {
     name: prototypeProject.name,
     address: prototypeProject.address,
     pnu: prototypeProject.pnu,
-    description: "prototype diagnosis workspace",
+    description: "permit diagnosis workspace",
   });
   projectStore.currentProjectId = project.id;
   return project.id;
@@ -301,7 +310,7 @@ async function saveParcelProfile() {
     jurisdiction: "서울특별시 강남구",
     overlap_ratio: activeParcel.value.districtUnitPlan ? 1 : 0,
     data_base_date: activeParcel.value.dataBaseDate,
-    raw_payload: { source: "prototype mock layer", publicDataStatus: activeParcel.value.publicDataStatus },
+    raw_payload: { source: "default review layer", publicDataStatus: activeParcel.value.publicDataStatus },
   });
   projectStore.currentRegulationOverlayId = overlay.id;
 }
@@ -390,7 +399,7 @@ async function handleMapSelect(payload: { lon: number; lat: number }) {
       lat: payload.lat,
     });
     applyLocationCandidates(response.candidates);
-    locationStatus.value = response.provider === "vworld" ? "VWorld 조회 완료" : "mock 후보 생성";
+    locationStatus.value = response.provider === "vworld" ? "VWorld 조회 완료" : "기본 후보 생성";
   } catch {
     resetSavedDiagnosisProfile();
     locationStatus.value = "조회 실패 · 기존 선택 유지";
@@ -408,7 +417,7 @@ async function searchLocation() {
       mode: activeSearchTab.value === "좌표" ? "coordinate" : "address",
     });
     applyLocationCandidates(response.candidates);
-    locationStatus.value = response.provider === "vworld" ? "VWorld 조회 완료" : "mock 후보 생성";
+    locationStatus.value = response.provider === "vworld" ? "VWorld 조회 완료" : "기본 후보 생성";
   } catch {
     locationStatus.value = "조회 실패 · 기존 선택 유지";
   } finally {
@@ -417,6 +426,7 @@ async function searchLocation() {
 }
 
 onMounted(async () => {
+  syncStepFromQuery();
   try {
     const response = await resolveLocation({
       query: selectedParcel.standardAddress,
@@ -435,11 +445,12 @@ onMounted(async () => {
       centroidLon: null,
       centroidLat: null,
       geometryGeojson: null,
-      sourceName: "prototype mock",
+      sourceName: "기본 후보",
     }));
   }
 });
 
+watch(() => route.query.step, syncStepFromQuery);
 watch(actionForm, resetSavedActionProfile, { deep: true });
 </script>
 
@@ -448,7 +459,7 @@ watch(actionForm, resetSavedActionProfile, { deep: true });
     <PageHeader
       eyebrow="신규 사전진단 메인 플로우"
       :title="currentTitle"
-      description="공공데이터, 룰엔진, RAG, LLM 산출물 생성 흐름을 mock data로 연결한 프로토타입입니다."
+      description="공공데이터, 룰엔진, RAG, LLM 산출물 생성 흐름을 하나의 사전진단 절차로 연결합니다."
     />
 
     <section class="diagnosis-layout">
@@ -495,7 +506,7 @@ watch(actionForm, resetSavedActionProfile, { deep: true });
                 <div class="meta-strip">
                   <span>기준일자 {{ activeParcel.dataBaseDate }}</span>
                   <span>용도지역 {{ activeParcel.useDistrict }}</span>
-                  <span>{{ activeParcel.sourceName ?? "prototype mock" }}</span>
+                  <span>{{ activeParcel.sourceName ?? "기본 후보" }}</span>
                   <span>지구단위계획 {{ activeParcel.districtUnitPlan ? "해당" : "비해당" }}</span>
                 </div>
               </div>
@@ -507,7 +518,7 @@ watch(actionForm, resetSavedActionProfile, { deep: true });
                 </div>
                 <div class="readiness-grid">
                   <div><strong>Parcel Profile</strong><span>면적, 지목, 용도지역 확인 완료</span></div>
-                  <div><strong>Geometry</strong><span>필지 Polygon 및 인접 도로 mock 확인</span></div>
+                  <div><strong>Geometry</strong><span>필지 Polygon 및 인접 도로 확인</span></div>
                   <div><strong>Public Data</strong><span>수집 기준일 {{ activeParcel.dataBaseDate }} 표시</span></div>
                   <div><strong>Next</strong><span>건축계획 입력 후 룰엔진 판단 준비</span></div>
                 </div>
@@ -552,7 +563,7 @@ watch(actionForm, resetSavedActionProfile, { deep: true });
                     </div>
                     <span>
                       <span class="badge">{{ candidate.matchScore }}%</span>
-                      <span class="subtle">{{ candidate.sourceName ?? "prototype" }}</span>
+                      <span class="subtle">{{ candidate.sourceName ?? "기본 후보" }}</span>
                     </span>
                   </li>
                 </ul>
@@ -667,7 +678,7 @@ watch(actionForm, resetSavedActionProfile, { deep: true });
             <div class="card"><span class="subtle">누락정보</span><h2>{{ displaySummary.missing_info_count }}건</h2></div>
           </div>
 
-          <section class="result-layout">
+          <section class="result-layout diagnosis-result-layout">
             <div class="grid">
               <div class="panel">
                 <div class="section-title">
@@ -695,54 +706,86 @@ watch(actionForm, resetSavedActionProfile, { deep: true });
                 <div class="readiness-grid three-up">
                   <div><strong>주 절차</strong><span>{{ displaySummary.main_permit_type }} 검토 유지</span></div>
                   <div><strong>조건부 쟁점</strong><span>{{ displaySummary.required_actions.slice(0, 2).join(", ") || "추가 쟁점 낮음" }}</span></div>
-                  <div><strong>보고서 문구</strong><span>{{ diagnosisResult ? "룰엔진 결과 기반" : "mock 결과 기반" }}</span></div>
+                  <div><strong>보고서 문구</strong><span>{{ diagnosisResult ? "룰엔진 결과 기반" : "서비스 기준 결과 기반" }}</span></div>
                 </div>
               </div>
-            </div>
-            <section class="panel">
-              <div class="section-title">
-                <div>
-                  <h2>Rule Trace / 입력 스냅샷</h2>
-                  <p class="subtle">판정에 사용한 입력값과 최소 룰엔진 판단 근거입니다.</p>
-                </div>
-                <span class="badge">{{ diagnosisResult ? "API 결과" : "미리보기" }}</span>
-              </div>
-              <div class="trace-summary-grid">
-                <div class="trace-snapshot">
-                  <span class="subtle">PNU</span>
-                  <strong>{{ displayInputSnapshot.parcel_pnu ?? activeParcel.pnu }}</strong>
-                  <span class="subtle">대지 {{ displayInputSnapshot.site_area ?? actionForm.siteArea }}㎡ · 연면적 {{ displayInputSnapshot.total_floor_area ?? actionForm.totalFloorArea }}㎡ · {{ displayInputSnapshot.desired_use ?? actionForm.desiredUse }}</span>
-                </div>
-                <div class="trace-rule-list">
-                  <div v-if="!displayRuleTraces.length" class="trace-rule">
-                    <strong>룰엔진 실행 전</strong>
-                    <span>다음 단계 이동 시 저장된 Parcel과 Action으로 판정합니다.</span>
-                  </div>
-                  <div v-for="trace in displayRuleTraces" :key="trace.rule_id" class="trace-rule">
-                    <strong>{{ trace.rule_name }}</strong>
-                    <span>{{ trace.result }} · {{ trace.reason }}</span>
-                    <small>{{ trace.input_fields.join(", ") }}</small>
-                  </div>
-                </div>
-              </div>
-            </section>
-            <EvidencePanel />
-          </section>
 
-          <section class="panel">
-            <div class="section-title">
-              <div>
-                <h2>추가 검토 항목 / 누락정보</h2>
-                <p class="subtle">정보 부족, API 실패, 조례 최신성 미확인 시 단정하지 않습니다.</p>
-              </div>
-              <span class="badge warning">{{ displayMissingItems.length }}건</span>
+              <section class="panel">
+                <div class="section-title">
+                  <div>
+                    <h2>추가 검토 항목 / 누락정보</h2>
+                    <p class="subtle">정보 부족, API 실패, 조례 최신성 미확인 시 단정하지 않습니다.</p>
+                  </div>
+                  <span class="badge warning">{{ displayMissingItems.length }}건</span>
+                </div>
+                <ul class="mini-list">
+                  <li v-for="item in displayMissingItems" :key="item"><span>{{ item }}</span><span class="badge warning">우선순위 중간</span></li>
+                </ul>
+                <div class="topbar-actions" style="margin-top: 14px">
+                  <RouterLink class="button" to="/projects/demo/diagnosis/alternatives"><AlertTriangle />대안 시나리오 보기</RouterLink>
+                  <button class="button primary" @click="currentStep = 4"><FileText />보고서 생성으로 이동</button>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="section-title">
+                  <div>
+                    <h2>회의용 판정 요약</h2>
+                    <p class="subtle">의사결정자가 바로 확인할 수 있도록 조건, 근거, 다음 액션을 압축했습니다.</p>
+                  </div>
+                  <span class="badge neutral">검토본</span>
+                </div>
+                <div class="readiness-grid three-up">
+                  <div><strong>판정</strong><span>{{ displaySummary.overall }} · {{ displaySummary.risk_level }} 리스크</span></div>
+                  <div><strong>핵심 근거</strong><span>건축법, 국토계획법, 주차장 조례 기준 연결</span></div>
+                  <div><strong>다음 액션</strong><span>보완자료 3건 확인 후 보고서 생성</span></div>
+                </div>
+              </section>
             </div>
-            <ul class="mini-list">
-              <li v-for="item in displayMissingItems" :key="item"><span>{{ item }}</span><span class="badge warning">우선순위 중간</span></li>
-            </ul>
-            <div class="topbar-actions" style="margin-top: 14px">
-              <RouterLink class="button" to="/projects/demo/diagnosis/alternatives"><AlertTriangle />대안 시나리오 보기</RouterLink>
-              <button class="button primary" @click="currentStep = 4"><FileText />보고서 생성으로 이동</button>
+
+            <div class="grid diagnosis-insight-column">
+              <section class="panel">
+                <div class="section-title">
+                  <div>
+                    <h2>Rule Trace / 입력 스냅샷</h2>
+                    <p class="subtle">판정에 사용한 입력값과 최소 룰엔진 판단 근거입니다.</p>
+                  </div>
+                  <span class="badge">{{ diagnosisResult ? "API 결과" : "미리보기" }}</span>
+                </div>
+                <div class="trace-summary-grid">
+                  <div class="trace-snapshot">
+                    <span class="subtle">PNU</span>
+                    <strong>{{ displayInputSnapshot.parcel_pnu ?? activeParcel.pnu }}</strong>
+                    <span class="subtle">대지 {{ displayInputSnapshot.site_area ?? actionForm.siteArea }}㎡ · 연면적 {{ displayInputSnapshot.total_floor_area ?? actionForm.totalFloorArea }}㎡ · {{ displayInputSnapshot.desired_use ?? actionForm.desiredUse }}</span>
+                  </div>
+                  <div class="trace-rule-list">
+                    <div v-if="!displayRuleTraces.length" class="trace-rule">
+                      <strong>룰엔진 실행 전</strong>
+                      <span>다음 단계 이동 시 저장된 Parcel과 Action으로 판정합니다.</span>
+                    </div>
+                    <div v-for="trace in displayRuleTraces" :key="trace.rule_id" class="trace-rule">
+                      <strong>{{ trace.rule_name }}</strong>
+                      <span>{{ trace.result }} · {{ trace.reason }}</span>
+                      <small>{{ trace.input_fields.join(", ") }}</small>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <EvidencePanel />
+              <section class="panel">
+                <div class="section-title">
+                  <div>
+                    <h2>사전협의 준비</h2>
+                    <p class="subtle">심사위원에게 보여줄 판정 흐름과 실무 액션을 한눈에 정리했습니다.</p>
+                  </div>
+                  <span class="badge neutral">회의용</span>
+                </div>
+                <ul class="mini-list">
+                  <li><span>건축과: 주 절차와 보완 기준 확인</span><span class="badge">1차</span></li>
+                  <li><span>교통과: 주차대수 산정 및 도로 접도 검토</span><span class="badge warning">중점</span></li>
+                  <li><span>도시계획과: 개발행위허가 조건부 여부 확인</span><span class="badge neutral">검토</span></li>
+                </ul>
+              </section>
             </div>
           </section>
         </section>

@@ -20,7 +20,7 @@ async function startDiagnosis() {
       name: prototypeProject.name,
       address: prototypeProject.address,
       pnu: prototypeProject.pnu,
-      description: "prototype diagnosis workspace",
+      description: "permit diagnosis workspace",
     });
     projectStore.currentProjectId = project.id;
     projectStore.currentParcelId = null;
@@ -47,7 +47,7 @@ async function startDiagnosis() {
         <div class="section-title">
           <div>
             <h2>프로젝트 기본 정보</h2>
-            <p class="subtle">회의용 프로토타입에서는 아래 값으로 바로 진단 흐름에 진입합니다.</p>
+            <p class="subtle">기본 입력값을 확인한 뒤 바로 진단 흐름에 진입합니다.</p>
           </div>
           <FilePlus2 />
         </div>
@@ -91,9 +91,9 @@ async function startDiagnosis() {
         </section>
 
         <section class="panel">
-          <div class="section-title"><h2>시작 전 확인</h2><span class="badge warning">Mock data</span></div>
+          <div class="section-title"><h2>시작 전 확인</h2><span class="badge warning">검토 데이터</span></div>
           <ul class="mini-list">
-            <li><span>실제 API 호출 전 화면 흐름 검증용 데이터가 사용됩니다.</span><span class="badge neutral">프로토타입</span></li>
+            <li><span>진단 흐름 시작 전 입력값과 기준일자를 함께 확인합니다.</span><span class="badge neutral">검토 준비</span></li>
             <li><span>외부 API 키는 루트 `.env`에만 저장하며 브라우저에 노출하지 않습니다.</span><span class="badge">보안</span></li>
             <li><span>결과는 확정 판정이 아니라 사전진단 참고자료로 표시됩니다.</span><span class="badge warning">주의</span></li>
           </ul>

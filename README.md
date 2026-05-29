@@ -15,14 +15,16 @@ AI 건축 인허가 매니저는 사용자가 주소, 지번, 좌표, 지도 클
 
 ## 1. 현재 구현 상태
 
-현재는 **프론트엔드 mockup + 백엔드 API 스캐폴딩** 단계입니다.
+현재는 **프론트엔드 mockup + 백엔드 DB/API 스캐폴딩** 단계입니다.
 
-- Frontend: Vue 3 + TypeScript + Vite 기반 mockup 화면 구현
-- Backend: FastAPI 라우터와 endpoint 스텁 구성
+- Frontend: Vue 3 + TypeScript + Vite 기반 mockup 화면 구현 및 PPT 캡처용 레이아웃 정리
+- Backend: FastAPI 라우터, SQLAlchemy 모델, DB session, repository/service, Project 기본 CRUD 구성
 - Infrastructure: PostgreSQL/PostGIS, Redis, Qdrant Docker Compose 구성
-- Data/AI: 룰엔진, RAG, LLM, 문서 생성 폴더 구조만 준비된 상태
+- Migration: Alembic 설정과 migration 디렉터리 구성, 실제 revision 생성은 다음 단계
+- Data/AI: 룰엔진, RAG, LLM, 문서 생성 폴더 구조와 초기 룰/메타데이터 준비
+- Capture: 발표/PPT 삽입용 전체 화면 캡처는 `capture/` 폴더에 저장
 
-프론트 mockup은 백엔드 연결 없이 화면 검토용으로 실행할 수 있습니다.
+프론트 mockup은 백엔드 연결 없이 화면 검토용으로 실행할 수 있습니다. 백엔드는 현재 Project CRUD를 제외하면 대부분 mock 또는 `not_implemented` 응답입니다.
 
 ---
 
@@ -44,6 +46,9 @@ AI 건축 인허가 매니저는 사용자가 주소, 지번, 좌표, 지도 클
 - Python 3.11+
 - FastAPI
 - Pydantic / pydantic-settings
+- SQLAlchemy 2.x
+- Alembic
+- psycopg 3
 - Uvicorn
 - PostgreSQL + PostGIS
 - Redis
@@ -83,7 +88,7 @@ ai-building-permit-manager/
         api/v1/                  HTTP API router
         core/                    보안, 로깅, 상수, 상태값
         db/                      DB session, migration, repository
-        models/                  DB model 예정
+        models/                  Project, Parcel, Building, Action, Trace, Report 등 DB model
         schemas/                 API DTO / Pydantic schema
         services/                백엔드 application service
         clients/                 외부 API client
@@ -93,6 +98,7 @@ ai-building-permit-manager/
   data/                          rules, legal-docs, seed, samples
   infra/                         Docker, DB, nginx, 배포 보조 파일
   docs/                          planning, architecture, api, data, history
+  capture/                       발표/PPT 삽입용 화면 캡처 산출물
   tests/                         E2E, fixture, RAG/룰엔진 평가
   scripts/                       문서 수집, DB 시드, 평가 실행 스크립트
 ```
@@ -308,10 +314,21 @@ curl http://localhost:8000/health
 ```
 
 현재 API는 초기 스캐폴딩 상태라 대부분 `not_implemented` 또는 빈 배열을 반환합니다.
+`POST /api/v1/projects`, `GET /api/v1/projects`, `GET /api/v1/projects/{project_id}`, `PATCH /api/v1/projects/{project_id}`는 SQLAlchemy repository/service를 통해 DB와 연결된 기본 CRUD입니다.
+
+Alembic 설정 확인:
+
+```bash
+cd apps/api
+source .venv/Scripts/activate
+alembic -c alembic.ini heads
+```
+
+현재는 migration 환경만 준비된 상태입니다. 실제 DB 테이블 생성용 revision은 별도 작업에서 생성합니다.
 
 ---
 
-## 10. 권장 실행 순서
+## 10. 권장 실행 순서와 종료 방법
 
 화면 mockup만 볼 때:
 
@@ -352,6 +369,57 @@ npm.cmd run dev
 3. `http://localhost:8000/docs`에서 FastAPI 문서 확인
 4. `http://localhost:5173/`에서 Vue 화면 확인
 
+### 종료 방법
+
+서버를 켤 때 사용한 터미널 3개를 기준으로 종료합니다.
+
+Terminal 3: Frontend
+
+```text
+Ctrl + C
+```
+
+`Terminate batch job (Y/N)?`가 나오면 `Y`를 입력합니다.
+
+Terminal 2: Backend
+
+```text
+Ctrl + C
+```
+
+가상환경을 빠져나오려면 다음을 실행합니다.
+
+```bash
+deactivate
+```
+
+Terminal 1: Infrastructure
+
+```bash
+docker compose down
+```
+
+컨테이너뿐 아니라 DB/Qdrant/Redis 볼륨까지 지우고 완전히 초기화할 때만 다음 명령을 사용합니다. 이 명령은 저장된 로컬 데이터를 삭제합니다.
+
+```bash
+docker compose down -v
+```
+
+종료 확인:
+
+```bash
+docker compose ps
+```
+
+프론트엔드 `5173`, 백엔드 `8000` 포트가 남아 있는지 확인하려면 Windows PowerShell에서 다음 명령을 사용할 수 있습니다.
+
+```powershell
+netstat -ano | findstr ":5173"
+netstat -ano | findstr ":8000"
+```
+
+목록이 비어 있으면 해당 포트의 개발 서버는 종료된 상태입니다.
+
 ---
 
 ## 11. 테스트와 검증
@@ -368,6 +436,22 @@ Backend import 확인:
 cd apps/api
 source .venv/Scripts/activate
 python -c "from app.main import app; print(app.title)"
+```
+
+SQLAlchemy 모델/관계 확인:
+
+```bash
+cd apps/api
+source .venv/Scripts/activate
+python -c "from sqlalchemy.orm import configure_mappers; from app.models import *; from app.db.base import Base; configure_mappers(); print(sorted(Base.metadata.tables))"
+```
+
+Alembic 설정 확인:
+
+```bash
+cd apps/api
+source .venv/Scripts/activate
+alembic -c alembic.ini heads
 ```
 
 Frontend build 확인:
@@ -453,15 +537,15 @@ docker info
 
 ## 13. 앞으로 구현할 주요 작업
 
-1. 프론트 mockup 회의 피드백 반영
-2. SQLAlchemy 모델과 Alembic migration 구성
-3. PostgreSQL/PostGIS 연결
-4. Project, Parcel, Building, Action 기본 CRUD
-5. Location resolve 스텁을 실제 PNU 변환 흐름으로 확장
-6. Action JSON schema 정의
-7. 룰셋 YAML schema와 Rule Engine 최소 구현
-8. 샘플 법령 chunk와 RAG 검색 스텁 구현
-9. DiagnosisRun 비동기 실행 구조 추가
+1. Alembic 첫 migration revision 생성 및 DB upgrade 검증
+2. Project CRUD에 인증 사용자 소유권 연결
+3. Parcel, Building, Action, RegulationOverlay 기본 CRUD 추가
+4. Location resolve 스텁을 실제 PNU 변환 흐름으로 확장
+5. Action JSON schema 정의
+6. 룰셋 YAML schema와 Rule Engine 최소 구현
+7. 샘플 법령 chunk와 RAG 검색 스텁 구현
+8. DiagnosisRun 비동기 실행 구조 추가
+9. Rule Trace와 Evidence Trace 저장 흐름 연결
 10. 체크리스트와 보고서 HTML/DOCX 생성
 
 MVP 1차는 전국 실데이터 완성이 아니라, 샘플 필지와 샘플 법령 근거로 진단 플로우가 끝까지 도는 세로 흐름을 만드는 것을 목표로 합니다.

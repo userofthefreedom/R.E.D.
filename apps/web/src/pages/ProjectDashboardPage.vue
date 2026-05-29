@@ -26,7 +26,7 @@ import AppShell from "../components/layout/AppShell.vue";
     </section>
 
     <section class="grid two" style="margin-top: 18px">
-      <div class="panel">
+      <div class="panel dashboard-project-panel">
         <div class="section-title">
           <div>
             <h2>프로젝트 목록</h2>
@@ -46,6 +46,32 @@ import AppShell from "../components/layout/AppShell.vue";
             </tr>
           </tbody>
         </table>
+
+        <div class="dashboard-bottom-grid">
+          <section class="compact-surface">
+            <div class="section-title compact">
+              <h3>오늘 우선 확인</h3>
+              <span class="badge warning">3건</span>
+            </div>
+            <ul class="mini-list dense-list">
+              <li><span>강남 역삼동 계획 주차 기준 보완</span><span class="badge warning">중간</span></li>
+              <li><span>부산 해운대 법령 근거 갱신 확인</span><span class="badge">RAG</span></li>
+              <li><span>인천 송도 추가정보 요청 문구 정리</span><span class="badge neutral">검토</span></li>
+            </ul>
+          </section>
+
+          <section class="compact-surface">
+            <div class="section-title compact">
+              <h3>진단 처리 큐</h3>
+              <span class="badge">룰엔진 대기 4건</span>
+            </div>
+            <div class="queue-grid">
+              <div><strong>7</strong><span>공공데이터 조회</span></div>
+              <div><strong>4</strong><span>룰엔진 대기</span></div>
+              <div><strong>5</strong><span>보고서 생성</span></div>
+            </div>
+          </section>
+        </div>
       </div>
 
       <div class="grid">

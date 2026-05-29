@@ -1,0 +1,427 @@
+R.E.D.v1.2
+==========
+
+작성일: 2026-05-29
+프로젝트: AI 건축 인허가 매니저
+팀: R.E.D. (Real Estate Developer)
+
+
+1. 이번 버전에서 다시 확인한 기준 문서
+--------------------------------------
+
+이번 점검에서는 다음 문서를 기준으로 현재 프로젝트 상태를 재확인했다.
+
+- docs/planning/AI_건축_인허가_매니저.docx
+- docs/planning/IA&wireframe.pdf
+- docs/planning/AI_건축_인허가_매니저_프로토타입_요구사항.md
+- docs/architecture/AI_건축_인허가_매니저_프로젝트_구조_설계안.txt
+- docs/api/API_KEY_GUIDE.txt
+- docs/history/R.E.D.v1.1.txt
+
+v1.1에서 확정한 핵심 방향은 유지한다.
+
+- 본 서비스는 단순 LLM 챗봇이 아니다.
+- 주소 문자열이 아니라 PNU, 필지 Geometry, Parcel Profile, Building Profile, Action JSON을 기준으로 판단한다.
+- 핵심 판단은 LLM이 아니라 룰엔진이 담당한다.
+- RAG는 법령, 조례, 지구단위계획 근거를 Evidence Trace로 연결한다.
+- LLM은 체크리스트, 사전협의 질문, 신청서 초안, 보고서 문장 생성 보조자로 제한한다.
+- 최종 결과는 관할 행정청 판단을 대체하지 않는 사전진단 참고자료로 제공한다.
+
+이번 v1.2의 핵심은 "화면 중심 프로토타입" 위에 "백엔드 DB/API 기초 구조"와 "현재 상태 기준 문서"를 얹은 것이다.
+
+
+2. v1.1 대비 달라진 점
+----------------------
+
+2.1 화면 캡처용 프론트 레이아웃 정리
+
+- 와이드 웹 화면을 전체 캡처했을 때 과하게 비어 보이던 영역을 줄였다.
+- 주요 화면의 카드 높이, 정보 밀도, 하단 공간, 우측 패널 배치를 조정했다.
+- 대상 화면은 다음 흐름을 포함한다.
+  - 홈
+  - 프로젝트 대시보드
+  - 내 프로젝트 목록
+  - 새 진단 시작
+  - 진단 Wizard 1~4단계
+  - 대안 시나리오
+  - 프로젝트 상세
+  - 진단 이력/버전 비교
+  - 보고서 미리보기
+  - 지원/예외 안내
+  - 데이터 출처 및 면책 안내
+- 전체 화면 캡처 산출물을 프로젝트 루트의 capture/ 폴더에 저장했다.
+
+2.2 백엔드 의존성 보강
+
+- apps/api/pyproject.toml에 DB 계층 구현에 필요한 의존성을 추가했다.
+  - SQLAlchemy 2.x
+  - psycopg 3
+  - Alembic
+- FastAPI 백엔드가 단순 endpoint 스텁에서 DB 연결을 전제로 한 구조로 한 단계 이동했다.
+
+2.3 DB base/session 구성
+
+- apps/api/app/db/base.py를 SQLAlchemy Declarative Base 기준으로 정리했다.
+- 공통 mixin을 추가했다.
+  - IdMixin
+  - TimestampMixin
+- UUID 기반 id 생성 구조를 잡았다.
+- naming convention을 둬서 향후 Alembic migration의 제약조건 이름이 안정적으로 생성되도록 했다.
+- apps/api/app/db/session.py에서 settings.database_url 기반 engine, SessionLocal, get_session을 구성했다.
+
+2.4 SQLAlchemy 모델 구현
+
+- v1.1에서는 DB 모델이 대부분 pass 상태였으나, v1.2에서는 핵심 모델을 실제 SQLAlchemy 모델로 전환했다.
+- 현재 구성된 주요 모델은 다음과 같다.
+  - User
+  - Project
+  - Parcel
+  - Building
+  - RegulationOverlay
+  - Action
+  - DiagnosisRun
+  - DiagnosisResult
+  - ProcedureResult
+  - RequiredDocument
+  - LegalDocument
+  - EvidenceChunk
+  - EvidenceTrace
+  - RuleSet
+  - Rule
+  - RuleExecutionTrace
+  - Report
+- app.models.__init__에서 전체 모델을 import하도록 정리했다.
+
+2.5 Project 중심 ERD 보강
+
+- Project는 사용자 프로젝트의 중심 테이블이다.
+- Project에 owner_id를 추가하여 User와 연결할 수 있게 했다.
+- 이 구조는 향후 JWT 인증과 프로젝트 단위 접근 제어를 붙이기 위한 기반이다.
+- Project는 다음 엔티티와 연결된다.
+  - Parcel
+  - Building
+  - RegulationOverlay
+  - Action
+  - DiagnosisRun
+  - Report
+
+2.6 RegulationOverlay 모델 추가
+
+- 기획서에서는 공간규제 중첩 결과를 중요한 판단 입력으로 다룬다.
+- 이를 Parcel JSON 내부에만 넣지 않고 별도 RegulationOverlay 모델로 분리했다.
+- 저장 대상은 다음과 같다.
+  - layer_code
+  - layer_name
+  - regulation_type
+  - jurisdiction
+  - overlap_area
+  - overlap_ratio
+  - source_name
+  - source_url
+  - data_base_date
+  - collected_at
+  - raw_payload
+- 이 모델은 향후 PostGIS 공간 중첩, VWorld WMS/WFS 결과, 공간규제 레이어 판단의 저장 지점이 된다.
+
+2.7 Project API 기본 CRUD 연결
+
+- apps/api/app/schemas/project.py를 확장했다.
+  - ProjectCreate
+  - ProjectUpdate
+  - ProjectRead
+- apps/api/app/db/repositories/project_repository.py를 구현했다.
+  - create
+  - list
+  - get
+  - update
+- apps/api/app/services/project_service.py에서 repository를 감싼 application service 구조를 만들었다.
+- apps/api/app/api/v1/projects.py에서 다음 endpoint를 DB와 연결했다.
+  - POST /api/v1/projects
+  - GET /api/v1/projects
+  - GET /api/v1/projects/{project_id}
+  - PATCH /api/v1/projects/{project_id}
+- reports, history, snapshots/compare는 아직 빈 배열 또는 not_implemented 수준이다.
+
+2.8 Alembic 환경 구성
+
+- apps/api/alembic.ini를 추가했다.
+- apps/api/app/db/migrations/env.py를 추가했다.
+- apps/api/app/db/migrations/script.py.mako를 추가했다.
+- apps/api/app/db/migrations/versions/ 디렉터리를 준비했다.
+- 현재는 migration 환경만 구성된 상태다.
+- 실제 DB 테이블 생성을 위한 첫 revision과 upgrade는 다음 작업이다.
+
+2.9 문서 구조 정리
+
+- docs/API_KEY_GUIDE.txt 경로는 현재 구조에 맞춰 docs/api/API_KEY_GUIDE.txt로 정리했다.
+- docs/history/R.E.D.v1.1.txt의 API 키 가이드 참조 경로도 docs/api/API_KEY_GUIDE.txt로 수정했다.
+- docs/architecture/AI_건축_인허가_매니저_프로젝트_구조_설계안.txt를 현재 상태에 맞게 업데이트했다.
+  - 현재 반영 상태 추가
+  - 아직 mock/stub인 영역 명시
+  - capture/ 폴더 반영
+  - Alembic 구조 반영
+  - support.py 반영
+  - regulation_overlay.py 반영
+  - Project CRUD 현황 반영
+  - PATCH /api/v1/projects/{project_id} 반영
+- README.md도 현재 상태에 맞게 업데이트했다.
+  - 백엔드 DB/API 스캐폴딩 상태 반영
+  - SQLAlchemy/Alembic/psycopg 기술 스택 반영
+  - capture/ 폴더 반영
+  - Project CRUD 상태 반영
+  - Alembic 확인 명령 추가
+  - 실행 순서와 종료 방법 정리
+
+
+3. 현재까지 된 것
+----------------
+
+현재 프로젝트는 다음 상태다.
+
+- 프론트엔드는 Vue 3 + TypeScript + Vite 기반 mockup 화면이 구현되어 있다.
+- 기획서의 5개 대표 화면은 현재 화면 구조상 "4단계 Wizard + 대안 시나리오 서브 페이지"로 표현되어 있다.
+- 와이드 화면 캡처 기준으로 주요 화면의 빈 공간과 정보 밀도를 조정했다.
+- capture/ 폴더에 전체 화면 캡처 산출물이 있다.
+- 백엔드는 FastAPI router 구조가 잡혀 있다.
+- SQLAlchemy 모델, DB session, repository/service의 기초 구조가 잡혔다.
+- Project 기본 CRUD는 DB 연결 구조로 구현되어 있다.
+- Alembic 환경은 준비되어 있다.
+- PostgreSQL/PostGIS, Redis, Qdrant docker-compose 구성은 유지되고 있다.
+- data/rules에는 v0.1 룰셋 YAML이 존재한다.
+- data/legal-docs에는 raw, parsed, chunks, metadata 구조가 있다.
+- services 폴더에는 location, public-data, rule-engine, rag, llm, document-generator 모듈 경계가 잡혀 있다.
+- API 키 신청 가이드는 docs/api/API_KEY_GUIDE.txt에 정리되어 있다.
+- README와 architecture 문서는 현재 상태 기준으로 업데이트되었다.
+
+
+4. 검증 결과
+------------
+
+이번 점검에서 확인한 내용은 다음과 같다.
+
+- 백엔드 의존성 설치:
+  - apps/api 가상환경에 SQLAlchemy, Alembic, psycopg 설치 확인
+- Python compile 확인:
+  - apps/api/app compileall 성공
+- FastAPI import 확인:
+  - `from app.main import app`
+  - 앱 title: AI Building Permit Manager API
+- SQLAlchemy mapper 확인:
+  - configure_mappers 성공
+- SQLAlchemy metadata 확인:
+  - actions
+  - buildings
+  - diagnosis_results
+  - diagnosis_runs
+  - evidence_chunks
+  - evidence_traces
+  - legal_documents
+  - parcels
+  - procedure_results
+  - projects
+  - regulation_overlays
+  - reports
+  - required_documents
+  - rule_execution_traces
+  - rule_sets
+  - rules
+  - users
+- Alembic 설정 확인:
+  - apps/api 기준 `alembic -c alembic.ini heads` 실행 가능
+  - 아직 revision은 생성하지 않았으므로 heads 출력은 비어 있는 상태
+- 문서 경로 확인:
+  - docs/API_KEY_GUIDE.txt 낡은 참조는 제거됨
+  - 현재 기준 경로는 docs/api/API_KEY_GUIDE.txt
+
+
+5. 아직 안 된 것
+----------------
+
+5.1 백엔드 / DB
+
+- Alembic 첫 migration revision 생성
+- 실제 PostgreSQL/PostGIS DB에 upgrade 적용
+- Project owner_id와 실제 인증 사용자 연결
+- Parcel CRUD
+- Building CRUD
+- RegulationOverlay CRUD
+- Action CRUD
+- DiagnosisRun 생성/조회/상태 관리
+- DiagnosisResult 저장/조회
+- ProcedureResult 저장/조회
+- RequiredDocument 저장/조회
+- EvidenceTrace 저장/조회
+- RuleExecutionTrace 저장/조회
+- Report 저장/조회/다운로드 흐름
+- reports, diagnosis, evidence, locations, actions, support API의 실제 응답 구현
+
+5.2 위치/공공데이터
+
+- 주소 검색 API client 구현
+- 도로명주소 API client 구현
+- VWorld client 구현
+- 지도 클릭 좌표 기반 reverse geocoding
+- PNU 변환 로직 구현
+- Parcel Profile 구성
+- BuildingHub 건축물대장 조회 구현
+- 토지이용계획 조회 구현
+- 공간규제 레이어 조회 구현
+- RegulationOverlay 저장 연결
+- 데이터 기준일자/수집시각 저장
+- API 실패/캐시/재시도 정책 구현
+
+5.3 룰엔진
+
+- 룰 YAML schema 확정
+- RuleLoader 구현
+- RuleEvaluator 구현
+- RuleEngine 구현
+- RuleExecutionTrace 생성 및 DB 저장
+- Evidence Query 생성
+- 조건부 절차 우선 판별
+  - 건축허가/건축신고
+  - 용도변경
+  - 개발행위허가
+  - 농지전용
+  - 산지전용
+  - 경관심의
+  - 교통영향평가
+  - 하수도 협의
+
+5.4 RAG
+
+- 법령/조례 원문 수집
+- 지구단위계획 PDF 수집
+- 문서 파싱
+- 조문/항/호/별표/서식 단위 청킹
+- Qdrant indexing
+- BM25 검색
+- Dense retrieval
+- Hybrid retrieval
+- Reranker
+- EvidenceSelector
+- EvidenceTrace DB 저장
+- RAG 근거를 ProcedureResult와 연결
+
+5.5 LLM/문서 생성
+
+- Structured output schema 구체화
+- 체크리스트 생성
+- 사전협의 질문 생성
+- 신청서/신고서 초안 생성
+- 보고서 생성
+- 단정 표현 완화 검증
+- Rule Trace / Evidence Trace와 충돌하는 문장 검증
+- DOCX 생성
+- PDF 변환
+- Report version 저장
+
+5.6 프론트엔드
+
+- 현재 mockData 기반 화면을 실제 API 응답으로 교체
+- Project CRUD API 연결
+- Location resolve API 연결
+- Action normalize API 연결
+- DiagnosisRun 생성 및 status 조회 연결
+- Evidence panel 실제 데이터 연결
+- Report 생성/다운로드 연결
+- 에러/로딩/재시도 상태 보강
+- 모바일 레이아웃 세부 정리는 후순위
+
+
+6. 다음 작업 제안
+----------------
+
+6.1 즉시 우선순위
+
+1) Alembic 첫 migration revision을 생성한다.
+2) Docker PostgreSQL/PostGIS를 띄운 뒤 migration upgrade를 검증한다.
+3) Project CRUD가 실제 DB에서 create/list/get/update 되는지 curl 또는 pytest로 확인한다.
+4) Project owner_id를 인증 사용자와 연결할 준비를 한다.
+5) Parcel, Building, Action, RegulationOverlay repository/service/schema를 만든다.
+6) Location resolve mock API를 만든다.
+7) 주소 또는 mock PNU 입력으로 Parcel Profile을 생성하는 흐름을 만든다.
+8) Action JSON schema를 확정한다.
+9) DiagnosisRun을 생성하고 pending/running/completed 상태를 저장하는 흐름을 만든다.
+10) 프론트 Wizard의 mockData 일부를 실제 API 응답으로 교체하기 시작한다.
+
+6.2 그 다음 개발 우선순위
+
+1) 최소 룰엔진을 연결한다.
+2) 우선 판별할 조건부 절차를 좁힌다.
+   - 건축허가/건축신고
+   - 용도변경
+   - 개발행위허가
+   - 농지전용
+3) RuleExecutionTrace를 DB에 저장한다.
+4) 샘플 법령 chunk를 EvidenceChunk로 적재한다.
+5) EvidenceTrace를 ProcedureResult와 연결한다.
+6) 진단 결과 화면을 실제 DiagnosisResult/ProcedureResult/EvidenceTrace 응답으로 전환한다.
+7) 체크리스트 생성 mock을 RequiredDocument 기반 로직으로 전환한다.
+8) 보고서 미리보기를 Report 저장 구조와 연결한다.
+9) DOCX 생성기를 붙인다.
+10) PDF 변환은 DOCX 생성 안정화 후 붙인다.
+
+
+7. 현재 실행 기준
+----------------
+
+프론트 프로토타입 실행:
+
+cd apps/web
+npm.cmd install
+npm.cmd run dev
+
+접속:
+
+http://localhost:5173/
+
+프론트 build 확인:
+
+cd apps/web
+npm.cmd run build
+
+인프라 실행:
+
+docker compose up -d
+docker compose ps
+
+백엔드 실행:
+
+cd apps/api
+source .venv/Scripts/activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+접속:
+
+http://localhost:8000/health
+http://localhost:8000/docs
+
+Alembic 설정 확인:
+
+cd apps/api
+source .venv/Scripts/activate
+alembic -c alembic.ini heads
+
+종료:
+
+- 프론트엔드 터미널: Ctrl + C
+- 백엔드 터미널: Ctrl + C 후 deactivate
+- 인프라 터미널: docker compose down
+- 로컬 DB/Qdrant/Redis 볼륨까지 초기화할 때만 docker compose down -v 사용
+
+
+8. 중요한 주의사항
+-----------------
+
+- .env는 Git에 올리지 않는다.
+- API 키는 프론트엔드 .env에 넣지 않는다.
+- API 키 값은 문서나 히스토리에 기록하지 않는다.
+- LLM이 인허가 가능/불가를 직접 판단하게 만들지 않는다.
+- 법령 설명은 반드시 Evidence Trace와 연결되도록 설계한다.
+- Rule Trace와 Evidence Trace는 MVP 초기부터 저장 구조를 잡는다.
+- 정보 부족, API 실패, 조례 최신성 미확인 상황에서는 단정하지 않고 추가정보 필요 또는 관할부서 확인 필요로 표시한다.
+- 대안 시나리오는 승인 가능성 보장이 아니라 의사결정 보조와 사전협의 준비 자료로 표현한다.
+- Alembic revision 생성 전에는 모델 변경 사항을 한 번 더 확인한다.
+- 마이그레이션 적용 전후로 Base.metadata와 실제 DB schema가 일치하는지 확인한다.
+- capture/ 폴더는 화면 검토 산출물이므로 실제 제품 런타임 코드와 구분한다.

@@ -73,73 +73,91 @@ const prevStep = () => (currentStep.value = Math.max(currentStep.value - 1, 1));
       </aside>
 
       <div class="grid">
-        <section v-if="currentStep === 1" class="result-layout">
-          <div class="panel">
-            <div class="section-title">
-              <div>
-                <h2>지도에서 대상지 확인</h2>
-                <p class="subtle">주소, 지번, 좌표 또는 지도 클릭으로 필지를 확정합니다.</p>
-              </div>
-              <span class="badge">공공데이터 조회 상태: 정상</span>
-            </div>
-            <ParcelMapMock />
-            <div class="meta-strip">
-              <span>기준일자 {{ selectedParcel.dataBaseDate }}</span>
-              <span>용도지역 {{ selectedParcel.useDistrict }}</span>
-              <span>지구단위계획 {{ selectedParcel.districtUnitPlan ? "해당" : "비해당" }}</span>
-            </div>
-          </div>
-
-          <div class="grid">
-            <div class="panel">
-              <div class="section-title">
-                <h2>검색 및 후보 선택</h2>
-                <span class="badge neutral">PNU 후보 {{ pnuCandidates.length }}건</span>
-              </div>
-              <div class="segmented-tabs">
-                <button
-                  v-for="tab in searchTabs"
-                  :key="tab"
-                  class="segment"
-                  :class="{ active: activeSearchTab === tab }"
-                  @click="activeSearchTab = tab"
-                >
-                  {{ tab }}
-                </button>
-              </div>
-              <div class="field" style="margin-top: 12px">
-                <label>{{ activeSearchTab }} 검색</label>
-                <div class="input-with-button">
-                  <input class="input" value="서울특별시 강남구 테헤란로 123" />
-                  <button class="button"><Search />검색</button>
+        <section v-if="currentStep === 1" class="grid">
+          <div class="result-layout">
+            <div class="grid">
+              <div class="panel">
+                <div class="section-title">
+                  <div>
+                    <h2>지도에서 대상지 확인</h2>
+                    <p class="subtle">주소, 지번, 좌표 또는 지도 클릭으로 필지를 확정합니다.</p>
+                  </div>
+                  <span class="badge">공공데이터 조회 상태: 정상</span>
+                </div>
+                <ParcelMapMock />
+                <div class="meta-strip">
+                  <span>기준일자 {{ selectedParcel.dataBaseDate }}</span>
+                  <span>용도지역 {{ selectedParcel.useDistrict }}</span>
+                  <span>지구단위계획 {{ selectedParcel.districtUnitPlan ? "해당" : "비해당" }}</span>
                 </div>
               </div>
-              <ul class="candidate-list">
-                <li v-for="candidate in pnuCandidates" :key="candidate.pnu" :class="{ selected: candidate.pnu === selectedParcel.pnu }">
-                  <div>
-                    <strong>{{ candidate.pnu }}</strong>
-                    <span>{{ candidate.standardAddress }}</span>
-                    <span class="subtle">{{ candidate.jibunAddress }} · {{ candidate.landCategory }} · {{ candidate.siteArea }}㎡</span>
-                  </div>
-                  <span class="badge">{{ candidate.matchScore }}%</span>
-                </li>
-              </ul>
+
+              <div class="panel compact-workbench">
+                <div>
+                  <h2>진단 준비 상태</h2>
+                  <p class="subtle">확정된 PNU와 필지 프로필을 다음 단계의 Action JSON 정규화 기준으로 넘깁니다.</p>
+                </div>
+                <div class="readiness-grid">
+                  <div><strong>Parcel Profile</strong><span>면적, 지목, 용도지역 확인 완료</span></div>
+                  <div><strong>Geometry</strong><span>필지 Polygon 및 인접 도로 mock 확인</span></div>
+                  <div><strong>Public Data</strong><span>수집 기준일 {{ selectedParcel.dataBaseDate }} 표시</span></div>
+                  <div><strong>Next</strong><span>건축계획 입력 후 룰엔진 판단 준비</span></div>
+                </div>
+              </div>
             </div>
 
-            <div class="panel">
-              <div class="section-title"><h2>선택된 대지 정보</h2><CheckCircle2 class="status-icon" /></div>
-              <table class="table">
-                <tbody>
-                  <tr><th>표준주소</th><td>{{ selectedParcel.standardAddress }}</td></tr>
-                  <tr><th>지번</th><td>{{ selectedParcel.jibunAddress }}</td></tr>
-                  <tr><th>법정동코드</th><td>{{ selectedParcel.legalDongCode }}</td></tr>
-                  <tr><th>PNU</th><td>{{ selectedParcel.pnu }}</td></tr>
-                  <tr><th>지목/면적</th><td>{{ selectedParcel.landCategory }} · {{ selectedParcel.siteArea }}㎡</td></tr>
-                  <tr><th>용도지역</th><td>{{ selectedParcel.useDistrict }}</td></tr>
-                </tbody>
-              </table>
+            <div class="grid">
+              <div class="panel">
+                <div class="section-title">
+                  <h2>검색 및 후보 선택</h2>
+                  <span class="badge neutral">PNU 후보 {{ pnuCandidates.length }}건</span>
+                </div>
+                <div class="segmented-tabs">
+                  <button
+                    v-for="tab in searchTabs"
+                    :key="tab"
+                    class="segment"
+                    :class="{ active: activeSearchTab === tab }"
+                    @click="activeSearchTab = tab"
+                  >
+                    {{ tab }}
+                  </button>
+                </div>
+                <div class="field" style="margin-top: 12px">
+                  <label>{{ activeSearchTab }} 검색</label>
+                  <div class="input-with-button">
+                    <input class="input" value="서울특별시 강남구 테헤란로 123" />
+                    <button class="button"><Search />검색</button>
+                  </div>
+                </div>
+                <ul class="candidate-list">
+                  <li v-for="candidate in pnuCandidates" :key="candidate.pnu" :class="{ selected: candidate.pnu === selectedParcel.pnu }">
+                    <div>
+                      <strong>{{ candidate.pnu }}</strong>
+                      <span>{{ candidate.standardAddress }}</span>
+                      <span class="subtle">{{ candidate.jibunAddress }} · {{ candidate.landCategory }} · {{ candidate.siteArea }}㎡</span>
+                    </div>
+                    <span class="badge">{{ candidate.matchScore }}%</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="panel">
+                <div class="section-title"><h2>선택된 대지 정보</h2><CheckCircle2 class="status-icon" /></div>
+                <table class="table">
+                  <tbody>
+                    <tr><th>표준주소</th><td>{{ selectedParcel.standardAddress }}</td></tr>
+                    <tr><th>지번</th><td>{{ selectedParcel.jibunAddress }}</td></tr>
+                    <tr><th>법정동코드</th><td>{{ selectedParcel.legalDongCode }}</td></tr>
+                    <tr><th>PNU</th><td>{{ selectedParcel.pnu }}</td></tr>
+                    <tr><th>지목/면적</th><td>{{ selectedParcel.landCategory }} · {{ selectedParcel.siteArea }}㎡</td></tr>
+                    <tr><th>용도지역</th><td>{{ selectedParcel.useDistrict }}</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
+
         </section>
 
         <section v-else-if="currentStep === 2" class="result-layout">
@@ -212,22 +230,36 @@ const prevStep = () => (currentStep.value = Math.max(currentStep.value - 1, 1));
           </div>
 
           <section class="result-layout">
-            <div class="panel">
-              <div class="section-title">
-                <div>
-                  <h2>조건부 절차 목록</h2>
-                  <p class="subtle">룰엔진 판단과 RAG 근거를 함께 확인하세요.</p>
+            <div class="grid">
+              <div class="panel">
+                <div class="section-title">
+                  <div>
+                    <h2>조건부 절차 목록</h2>
+                    <p class="subtle">룰엔진 판단과 RAG 근거를 함께 확인하세요.</p>
+                  </div>
+                  <span class="badge warning">관할부서 확인 필요</span>
                 </div>
-                <span class="badge warning">관할부서 확인 필요</span>
+                <table class="table">
+                  <thead><tr><th>절차명</th><th>대상 여부</th><th>판단 사유</th><th>담당 부서</th><th>리스크</th></tr></thead>
+                  <tbody>
+                    <tr v-for="row in procedureRows" :key="row.name">
+                      <td>{{ row.name }}</td><td>{{ row.target }}</td><td>{{ row.reason }}</td><td>{{ row.department }}</td><td>{{ row.risk }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <table class="table">
-                <thead><tr><th>절차명</th><th>대상 여부</th><th>판단 사유</th><th>담당 부서</th><th>리스크</th></tr></thead>
-                <tbody>
-                  <tr v-for="row in procedureRows" :key="row.name">
-                    <td>{{ row.name }}</td><td>{{ row.target }}</td><td>{{ row.reason }}</td><td>{{ row.department }}</td><td>{{ row.risk }}</td>
-                  </tr>
-                </tbody>
-              </table>
+
+              <div class="panel compact-workbench">
+                <div>
+                  <h2>판정 해석 메모</h2>
+                  <p class="subtle">단정 대신 보완·협의 중심 표현으로 보고서에 반영됩니다.</p>
+                </div>
+                <div class="readiness-grid three-up">
+                  <div><strong>주 절차</strong><span>건축허가 검토 유지</span></div>
+                  <div><strong>조건부 쟁점</strong><span>도로 접도, 주차 기준, 교통 검토</span></div>
+                  <div><strong>보고서 문구</strong><span>사전협의 권장으로 완화</span></div>
+                </div>
+              </div>
             </div>
             <EvidencePanel />
           </section>
